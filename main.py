@@ -22,7 +22,7 @@ def run_flask():
     app.run(host="0.0.0.0", port=port)
 
 
-BOT_TOKEN = "8236609513:AAE6f3p0zIaXqWQ9Gz9Rfx3Wr9DsqUCokko"
+BOT_TOKEN = "8276540429:AAGzVL1n5BHNaoRfEoZvoRzYGTNjklkIWTk"
 bot = telebot.TeleBot(BOT_TOKEN)
 user_data = {}
 
