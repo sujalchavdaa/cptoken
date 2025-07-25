@@ -4,11 +4,6 @@ import telebot
 from flask import Flask
 import threading
 
-import requests
-import telebot
-from flask import Flask
-import threading
-
 app = Flask("render_web")
 def safe_send(send_func, *args, **kwargs):
     try:
@@ -17,8 +12,6 @@ def safe_send(send_func, *args, **kwargs):
         print(f"[safe_send error] {e}")
         return None
 
-
-
 @app.route("/")
 def home():
     return "✅ Bot is running on Render!"
@@ -26,7 +19,6 @@ def home():
 def run_flask():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
 
 BOT_TOKEN = "8276540429:AAGzVL1n5BHNaoRfEoZvoRzYGTNjklkIWTk"
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -73,14 +65,27 @@ def send_otp(email, org_code, org_id):
         "api-version": "52",
         "device-id": "1753438844495"
     }
-    res = requests.post(url, json=payload, headers=headers)
-    if res.status_code == 200 and "sessionId" in res.text:
-        session_id = res.json()["data"]["sessionId"]
-        print("✅ OTP sent to:", email)
-        return session_id
-    else:
-        print("❌ OTP not sent.")
-        print(res.text)
+    try:
+        res = requests.post(url, json=payload, headers=headers)
+        print("📩 OTP Response:", res.status_code, res.text)
+
+        if res.status_code == 200 and "sessionId" in res.text:
+            session_id = res.json()["data"]["sessionId"]
+            print("✅ OTP sent to:", email)
+            return session_id
+
+        elif "OTP request limit exceeded" in res.text:
+            print("🔁 Limit hit. Waiting 5 seconds before retrying...")
+            import time
+            time.sleep(5)
+            return send_otp(email, org_code, org_id)
+
+        else:
+            print("❌ OTP not sent.")
+            return None
+
+    except Exception as e:
+        print("❌ Error in send_otp:", e)
         return None
 
 def verify_otp(session_id, otp_code, org_code, org_id, email):
