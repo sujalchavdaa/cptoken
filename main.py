@@ -1,5 +1,26 @@
 import requests
 import telebot
+from flask import Flask
+import threading
+
+app = Flask("render_web")
+def safe_send(send_func, *args, **kwargs):
+    try:
+        return send_func(*args, **kwargs)
+    except Exception as e:
+        print(f"[safe_send error] {e}")
+        return None
+
+
+
+@app.route("/")
+def home():
+    return "✅ Bot is running on Render!"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
+
 
 BOT_TOKEN = "8236609513:AAE6f3p0zIaXqWQ9Gz9Rfx3Wr9DsqUCokko"
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -170,5 +191,7 @@ def process_otp(message):
     else:
         bot.send_message(message.chat.id, "❌ Token not received. Please try again.")
 
-# Start the bot with extended timeout
-bot.infinity_polling(timeout=60, long_polling_timeout=60)
+if __name__ == "__main__":
+    threading.Thread(target=run_flask).start()
+    print("🤖 Bot is running... Waiting for messages.")
+    bot.infinity_polling()
