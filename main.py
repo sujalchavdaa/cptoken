@@ -31,60 +31,32 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 user_data = {}
 
-def generate_gmail_temp():
-    """Generate a Gmail temp account"""
+def generate_disposable_email():
+    """Generate disposable email using professional APIs"""
     try:
-        # Generate random Gmail account
-        username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
-        email = f"{username}@gmail.com"
-        return email
+        # Try 1secmail API (most reliable)
+        url = "https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1"
+        response = requests.get(url)
+        if response.status_code == 200:
+            emails = response.json()
+            if emails:
+                return emails[0]
     except:
-        return None
-
-def create_gmail_account(email):
-    """Create Gmail account using Gmail API or web automation"""
+        pass
+    
     try:
-        # For now, we'll simulate Gmail account creation
-        # In real implementation, you'd use Gmail API or Selenium
-        print(f"📧 Creating Gmail account: {email}")
-        return True
+        # Try temp-mail.org API
+        url = "https://web2.temp-mail.org/mailbox"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+        response = requests.post(url, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('mailbox', '')
     except:
-        return False
-
-def check_gmail_for_otp(email, max_wait=60):
-    """Check Gmail for OTP using Gmail API or IMAP"""
-    start_time = time.time()
+        pass
     
-    while time.time() - start_time < max_wait:
-        try:
-            # Simulate checking Gmail for OTP
-            # In real implementation, you'd use Gmail API or IMAP
-            print(f"📧 Checking Gmail: {email}")
-            
-            # For testing, let's try some common OTPs
-            common_otps = ["123456", "000000", "111111", "222222", "333333", "444444", "555555", "666666", "777777", "888888", "999999"]
-            
-            for otp in common_otps:
-                print(f"🔐 Trying OTP: {otp}")
-                time.sleep(1)
-            
-            time.sleep(5)
-            return None
-            
-        except Exception as e:
-            print(f"Error checking Gmail: {e}")
-            time.sleep(3)
-    
-    return None
-
-def generate_temp_email():
-    """Generate a temporary email - try Gmail first, then fallback"""
-    # Try Gmail temp account
-    gmail_email = generate_gmail_temp()
-    if gmail_email:
-        return gmail_email
-    
-    # Fallback to old method
     try:
         # Try 10minutemail API
         url = "https://10minutemail.net/address.api.php"
@@ -95,21 +67,63 @@ def generate_temp_email():
     except:
         pass
     
-    # Final fallback - generate random email
-    username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
-    domain = random.choice(['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'])
+    # Fallback - generate custom disposable email
+    username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
+    domains = [
+        'mu.undeadbanksu.com', 'temp-mail.org', 'guerrillamail.com',
+        '10minutemail.com', 'tempmail.org', 'mailinator.com',
+        'yopmail.com', 'getnada.com', 'sharklasers.com'
+    ]
+    domain = random.choice(domains)
     return f"{username}@{domain}"
 
-def check_temp_email_for_otp(email, max_wait=60):
-    """Check temporary email for OTP from Classplus"""
+def check_disposable_email_for_otp(email, max_wait=60):
+    """Check disposable email for OTP using professional APIs"""
     start_time = time.time()
-    
-    # If it's a Gmail account, use Gmail checking
-    if '@gmail.com' in email:
-        return check_gmail_for_otp(email, max_wait)
     
     while time.time() - start_time < max_wait:
         try:
+            # Try 1secmail API
+            if '@' in email:
+                username, domain = email.split('@')
+                url = f"https://www.1secmail.com/api/v1/?action=getMessages&login={username}&domain={domain}"
+                response = requests.get(url)
+                if response.status_code == 200:
+                    messages = response.json()
+                    for message in messages:
+                        # Get message content
+                        msg_id = message.get('id')
+                        if msg_id:
+                            content_url = f"https://www.1secmail.com/api/v1/?action=readMessage&login={username}&domain={domain}&id={msg_id}"
+                            content_response = requests.get(content_url)
+                            if content_response.status_code == 200:
+                                content_data = content_response.json()
+                                body = content_data.get('body', '')
+                                subject = content_data.get('subject', '')
+                                
+                                if 'classplus' in subject.lower() or 'otp' in subject.lower():
+                                    # Extract OTP from email content
+                                    otp_match = re.search(r'\b\d{6}\b', body)
+                                    if otp_match:
+                                        return otp_match.group()
+            
+            # Try temp-mail.org API
+            url = "https://web2.temp-mail.org/messages"
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                messages = data.get('messages', [])
+                
+                for message in messages:
+                    if 'classplus' in message.get('subject', '').lower() or 'otp' in message.get('subject', '').lower():
+                        content = message.get('body', '')
+                        otp_match = re.search(r'\b\d{6}\b', content)
+                        if otp_match:
+                            return otp_match.group()
+            
             # Try 10minutemail API
             url = "https://10minutemail.net/address.api.php"
             response = requests.get(url)
@@ -119,7 +133,6 @@ def check_temp_email_for_otp(email, max_wait=60):
                 
                 for mail in emails:
                     if 'classplus' in mail.get('mail_subject', '').lower() or 'otp' in mail.get('mail_subject', '').lower():
-                        # Extract OTP from email content
                         content = mail.get('mail_body', '')
                         otp_match = re.search(r'\b\d{6}\b', content)
                         if otp_match:
@@ -128,7 +141,7 @@ def check_temp_email_for_otp(email, max_wait=60):
             time.sleep(3)  # Wait 3 seconds before checking again
             
         except Exception as e:
-            print(f"Error checking temp email: {e}")
+            print(f"Error checking disposable email: {e}")
             time.sleep(3)
     
     return None
@@ -195,22 +208,13 @@ def get_access_token():
         return res.json()["data"]["token"]
     return None
 
-def try_common_otps():
-    """Try common OTP patterns that might work"""
-    common_otps = [
-        "123456", "000000", "111111", "222222", "333333", "444444", 
-        "555555", "666666", "777777", "888888", "999999", "123123",
-        "000123", "123000", "111222", "222333", "333444", "444555"
-    ]
-    return common_otps
-
 @bot.message_handler(commands=['start'])
 def welcome(message):
-    bot.send_message(message.chat.id, "👋 Welcome to Classplus Token Generator Bot!\n\n🔧 **Available Methods:**\n\n1️⃣ **Auto Gmail Mode** (NEW): `/auto` - Just send org code\n2️⃣ **Manual Mode** (Reliable): `/manual` - Send org code + email + OTP\n3️⃣ **Common OTPs** (Experimental): `/common` - Try common OTPs\n\n💡 **Recommendation**: Use `/auto` for best results!")
+    bot.send_message(message.chat.id, "👋 Welcome to Classplus Token Generator Bot!\n\n🔧 **Available Methods:**\n\n1️⃣ **Auto Disposable Email** (NEW): `/auto` - Just send org code\n2️⃣ **Manual Mode** (Reliable): `/manual` - Send org code + email + OTP\n\n💡 **Recommendation**: Use `/auto` for best results!")
 
 @bot.message_handler(commands=['auto'])
 def ask_org_code_auto(message):
-    bot.send_message(message.chat.id, "🤖 **Auto Gmail Mode** (NEW)\n\n📧 I'll create a Gmail account and automatically get the OTP!\n\n📝 Send the ORG CODE:")
+    bot.send_message(message.chat.id, "🤖 **Auto Disposable Email Mode** (NEW)\n\n📧 I'll create a disposable email and automatically get the OTP!\n\n📝 Send the ORG CODE:")
     bot.register_next_step_handler(message, process_org_code_auto)
 
 def process_org_code_auto(message):
@@ -226,15 +230,15 @@ def process_org_code_auto(message):
             bot.edit_message_text("❌ Invalid ORG code.", chat_id=message.chat.id, message_id=processing_msg.message_id)
             return
 
-        # Step 2: Generate Gmail temp email
-        bot.edit_message_text("📧 Creating Gmail account...", chat_id=message.chat.id, message_id=processing_msg.message_id)
-        email = generate_gmail_temp()
+        # Step 2: Generate disposable email
+        bot.edit_message_text("📧 Creating disposable email...", chat_id=message.chat.id, message_id=processing_msg.message_id)
+        email = generate_disposable_email()
         
         if not email:
-            bot.edit_message_text("❌ Failed to create Gmail account. Try manual mode.", chat_id=message.chat.id, message_id=processing_msg.message_id)
+            bot.edit_message_text("❌ Failed to create disposable email. Try manual mode.", chat_id=message.chat.id, message_id=processing_msg.message_id)
             return
             
-        bot.edit_message_text(f"📧 Gmail created: {email}\n🔄 Sending OTP...", chat_id=message.chat.id, message_id=processing_msg.message_id)
+        bot.edit_message_text(f"📧 Disposable email created: {email}\n🔄 Sending OTP...", chat_id=message.chat.id, message_id=processing_msg.message_id)
         
         # Step 3: Send OTP
         session_id = send_otp(email, org_code, org_id)
@@ -256,108 +260,10 @@ def process_org_code_auto(message):
             bot.edit_message_text("❌ OTP send failed. Try again.", chat_id=message.chat.id, message_id=processing_msg.message_id)
             return
 
-        # Step 4: Try common OTPs automatically
-        bot.edit_message_text("🔐 Trying common OTPs automatically...", chat_id=message.chat.id, message_id=processing_msg.message_id)
+        # Step 4: Check disposable email for OTP
+        bot.edit_message_text("📥 Checking disposable email for OTP...", chat_id=message.chat.id, message_id=processing_msg.message_id)
         
-        common_otps = try_common_otps()
-        for i, otp in enumerate(common_otps):
-            bot.edit_message_text(f"🔐 Trying OTP {i+1}/{len(common_otps)}: {otp}", chat_id=message.chat.id, message_id=processing_msg.message_id)
-            
-            verified = verify_otp(session_id, otp, org_id, email)
-            if verified:
-                # Step 5: Get access token
-                bot.edit_message_text("✅ OTP verified!\n🔄 Getting access token...", chat_id=message.chat.id, message_id=processing_msg.message_id)
-                
-                token = get_access_token()
-                if token:
-                    bot.edit_message_text(
-                        f"🎉 **Success!**\n\n"
-                        f"📧 Gmail: `{email}`\n"
-                        f"🔑 OTP used: `{otp}`\n\n"
-                        f"✅ **Your Access Token:**\n\n"
-                        f"<code>{token}</code>", 
-                        chat_id=message.chat.id, 
-                        message_id=processing_msg.message_id,
-                        parse_mode="HTML"
-                    )
-                else:
-                    bot.edit_message_text("❌ Failed to get access token.", chat_id=message.chat.id, message_id=processing_msg.message_id)
-                return
-            else:
-                # Wait a bit before next attempt
-                time.sleep(1)
-                continue
-        
-        # If all attempts failed, show manual option
-        bot.edit_message_text(
-            f"📧 **Gmail Created Successfully!**\n\n"
-            f"📧 Gmail: `{email}`\n"
-            f"🔑 Session ID: `{session_id}`\n\n"
-            f"💡 **Next Steps:**\n"
-            f"1️⃣ Check your Gmail: {email}\n"
-            f"2️⃣ Find the OTP email from Classplus\n"
-            f"3️⃣ Send the OTP here\n\n"
-            f"🔧 **Or use Manual Mode**: `/manual`", 
-            chat_id=message.chat.id, 
-            message_id=processing_msg.message_id,
-            parse_mode="HTML"
-        )
-
-    except Exception as e:
-        bot.edit_message_text(f"❌ Error: {str(e)}", chat_id=message.chat.id, message_id=processing_msg.message_id)
-
-@bot.message_handler(commands=['gmail'])
-def ask_org_code_gmail(message):
-    bot.send_message(message.chat.id, "📧 **Gmail Auto Mode** (NEW)\n\n📧 I'll create a Gmail temp account and try to get the OTP!\n\n📝 Send the ORG CODE:")
-    bot.register_next_step_handler(message, process_org_code_gmail)
-
-def process_org_code_gmail(message):
-    org_code = message.text.strip()
-    
-    # Send processing message
-    processing_msg = bot.send_message(message.chat.id, "🔄 Processing... Please wait.")
-    
-    try:
-        # Step 1: Get org ID
-        org_id = get_org_id(org_code)
-        if not org_id:
-            bot.edit_message_text("❌ Invalid ORG code.", chat_id=message.chat.id, message_id=processing_msg.message_id)
-            return
-
-        # Step 2: Generate Gmail temp email
-        bot.edit_message_text("📧 Creating Gmail temp account...", chat_id=message.chat.id, message_id=processing_msg.message_id)
-        email = generate_gmail_temp()
-        
-        if not email:
-            bot.edit_message_text("❌ Failed to create Gmail account. Try manual mode.", chat_id=message.chat.id, message_id=processing_msg.message_id)
-            return
-            
-        bot.edit_message_text(f"📧 Gmail created: {email}\n🔄 Sending OTP...", chat_id=message.chat.id, message_id=processing_msg.message_id)
-        
-        # Step 3: Send OTP
-        session_id = send_otp(email, org_code, org_id)
-        
-        if session_id == "RATE_LIMIT_EXCEEDED":
-            bot.edit_message_text(
-                "⚠️ **Rate Limit Exceeded!**\n\n"
-                "🚫 Classplus ne 6 hours ka limit lagaya hai.\n\n"
-                "💡 **Solutions:**\n"
-                "1️⃣ **Wait 6 hours** and try again\n"
-                "2️⃣ **Use Manual Mode**: `/manual`\n"
-                "3️⃣ **Try different org code**\n\n"
-                "📝 Manual mode mein aap apna real email use kar sakte hain.", 
-                chat_id=message.chat.id, 
-                message_id=processing_msg.message_id
-            )
-            return
-        elif not session_id:
-            bot.edit_message_text("❌ OTP send failed. Try again.", chat_id=message.chat.id, message_id=processing_msg.message_id)
-            return
-
-        # Step 4: Check Gmail for OTP
-        bot.edit_message_text("📥 Checking Gmail for OTP...", chat_id=message.chat.id, message_id=processing_msg.message_id)
-        
-        otp = check_gmail_for_otp(email, max_wait=60)
+        otp = check_disposable_email_for_otp(email, max_wait=60)
         
         if otp:
             bot.edit_message_text(f"✅ OTP found: {otp}\n🔄 Verifying OTP...", chat_id=message.chat.id, message_id=processing_msg.message_id)
@@ -372,7 +278,7 @@ def process_org_code_gmail(message):
                 if token:
                     bot.edit_message_text(
                         f"🎉 **Success!**\n\n"
-                        f"📧 Gmail: `{email}`\n"
+                        f"📧 Disposable email: `{email}`\n"
                         f"🔑 OTP used: `{otp}`\n\n"
                         f"✅ **Your Access Token:**\n\n"
                         f"<code>{token}</code>", 
@@ -387,11 +293,11 @@ def process_org_code_gmail(message):
                 bot.edit_message_text("❌ OTP verification failed.", chat_id=message.chat.id, message_id=processing_msg.message_id)
         else:
             bot.edit_message_text(
-                f"📧 **Gmail Created Successfully!**\n\n"
-                f"📧 Gmail: `{email}`\n"
+                f"📧 **Disposable Email Created Successfully!**\n\n"
+                f"📧 Email: `{email}`\n"
                 f"🔑 Session ID: `{session_id}`\n\n"
                 f"💡 **Next Steps:**\n"
-                f"1️⃣ Check your Gmail: {email}\n"
+                f"1️⃣ Check disposable email: {email}\n"
                 f"2️⃣ Find the OTP email from Classplus\n"
                 f"3️⃣ Send the OTP here\n\n"
                 f"🔧 **Or use Manual Mode**: `/manual`", 
@@ -399,87 +305,6 @@ def process_org_code_gmail(message):
                 message_id=processing_msg.message_id,
                 parse_mode="HTML"
             )
-
-    except Exception as e:
-        bot.edit_message_text(f"❌ Error: {str(e)}", chat_id=message.chat.id, message_id=processing_msg.message_id)
-
-@bot.message_handler(commands=['common'])
-def ask_org_code_common(message):
-    bot.send_message(message.chat.id, "🤖 **Common OTP Mode** (Experimental)\n\n⚠️ This mode tries common OTPs but may not work.\n\n📝 Send the ORG CODE:")
-    bot.register_next_step_handler(message, process_org_code_common)
-
-def process_org_code_common(message):
-    org_code = message.text.strip()
-    
-    # Send processing message
-    processing_msg = bot.send_message(message.chat.id, "🔄 Processing... Please wait.")
-    
-    try:
-        # Step 1: Get org ID
-        org_id = get_org_id(org_code)
-        if not org_id:
-            bot.edit_message_text("❌ Invalid ORG code.", chat_id=message.chat.id, message_id=processing_msg.message_id)
-            return
-
-        # Step 2: Generate random email
-        email = generate_temp_email()
-        bot.edit_message_text(f"📧 Generated email: {email}\n🔄 Sending OTP...", chat_id=message.chat.id, message_id=processing_msg.message_id)
-        
-        # Step 3: Send OTP
-        session_id = send_otp(email, org_code, org_id)
-        
-        if session_id == "RATE_LIMIT_EXCEEDED":
-            bot.edit_message_text(
-                "⚠️ **Rate Limit Exceeded!**\n\n"
-                "🚫 Classplus ne 6 hours ka limit lagaya hai.\n\n"
-                "💡 **Try Manual Mode**: `/manual`", 
-                chat_id=message.chat.id, 
-                message_id=processing_msg.message_id
-            )
-            return
-        elif not session_id:
-            bot.edit_message_text("❌ OTP send failed. Try again.", chat_id=message.chat.id, message_id=processing_msg.message_id)
-            return
-
-        # Step 4: Try common OTPs
-        bot.edit_message_text("🔐 Trying common OTPs...", chat_id=message.chat.id, message_id=processing_msg.message_id)
-        
-        common_otps = try_common_otps()
-        for i, otp in enumerate(common_otps):
-            bot.edit_message_text(f"🔐 Trying OTP {i+1}/{len(common_otps)}: {otp}", chat_id=message.chat.id, message_id=processing_msg.message_id)
-            
-            verified = verify_otp(session_id, otp, org_id, email)
-            if verified:
-                # Step 5: Get access token
-                bot.edit_message_text("✅ OTP verified!\n🔄 Getting access token...", chat_id=message.chat.id, message_id=processing_msg.message_id)
-                
-                token = get_access_token()
-                if token:
-                    bot.edit_message_text(
-                        f"🎉 **Success!**\n\n"
-                        f"📧 Email used: `{email}`\n"
-                        f"🔑 OTP used: `{otp}`\n\n"
-                        f"✅ **Your Access Token:**\n\n"
-                        f"<code>{token}</code>", 
-                        chat_id=message.chat.id, 
-                        message_id=processing_msg.message_id,
-                        parse_mode="HTML"
-                    )
-                else:
-                    bot.edit_message_text("❌ Failed to get access token.", chat_id=message.chat.id, message_id=processing_msg.message_id)
-                return
-            else:
-                # Wait a bit before next attempt
-                time.sleep(1)
-                continue
-        
-        # If all attempts failed
-        bot.edit_message_text(
-            "❌ Common OTPs didn't work.\n\n"
-            "💡 **Try Manual Mode**: `/manual`", 
-            chat_id=message.chat.id, 
-            message_id=processing_msg.message_id
-        )
 
     except Exception as e:
         bot.edit_message_text(f"❌ Error: {str(e)}", chat_id=message.chat.id, message_id=processing_msg.message_id)
@@ -544,7 +369,7 @@ def token_command(message):
 
 if __name__ == "__main__":
     threading.Thread(target=run_flask).start()
-    print("🤖 Classplus Token Bot with Auto Gmail Mode is running... Waiting for messages.")
+    print("🤖 Classplus Token Bot with Professional Disposable Email is running... Waiting for messages.")
     bot.infinity_polling()
 
 
