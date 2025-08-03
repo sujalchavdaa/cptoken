@@ -4,6 +4,8 @@ from telebot import types
 import requests
 from flask import Flask
 import threading
+import random
+import string
 
 app = Flask("render_web")
 def safe_send(send_func, *args, **kwargs):
@@ -25,6 +27,12 @@ BOT_TOKEN = "7981010429:AAEAxW6kghZ5-uetl0OdRLuqvMopaEkzolQ"
 bot = telebot.TeleBot(BOT_TOKEN)
 
 user_data = {}
+
+def generate_random_email():
+    """Generate a random email for OTP generation"""
+    username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+    domain = random.choice(['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'])
+    return f"{username}@{domain}"
 
 def get_org_id(org_code):
     try:
@@ -84,17 +92,87 @@ def get_access_token():
         return res.json()["data"]["token"]
     return None
 
+def auto_generate_otp():
+    """Generate a random 6-digit OTP"""
+    return ''.join(random.choices(string.digits, k=6))
+
 @bot.message_handler(commands=['start'])
 def welcome(message):
-    bot.send_message(message.chat.id, "👋 Welcome to Classplus Token Generator Bot!\nUse /token to begin.")
+    bot.send_message(message.chat.id, "👋 Welcome to Auto Classplus Token Generator Bot!\n\n🔧 **New Feature**: Just send the ORG CODE and I'll automatically generate OTP and get your access token!\n\nUse /token to begin.")
 
 @bot.message_handler(commands=['token'])
-def ask_org_email(message):
-    bot.send_message(message.chat.id, "📝 Send in `ORGCODE*EMAIL` format:")
-    bot.register_next_step_handler(message, process_org_email)
+def ask_org_code(message):
+    bot.send_message(message.chat.id, "📝 Send the ORG CODE only:")
+    bot.register_next_step_handler(message, process_org_code)
 
+def process_org_code(message):
+    org_code = message.text.strip()
+    
+    # Send processing message
+    processing_msg = bot.send_message(message.chat.id, "🔄 Processing... Please wait.")
+    
+    try:
+        # Step 1: Get org ID
+        org_id = get_org_id(org_code)
+        if not org_id:
+            bot.edit_message_text("❌ Invalid ORG code.", chat_id=message.chat.id, message_id=processing_msg.message_id)
+            return
 
-def process_org_email(message):
+        # Step 2: Generate random email
+        email = generate_random_email()
+        bot.edit_message_text(f"📧 Generated email: {email}\n🔄 Sending OTP...", chat_id=message.chat.id, message_id=processing_msg.message_id)
+        
+        # Step 3: Send OTP
+        session_id = send_otp(email, org_code, org_id)
+        if not session_id:
+            bot.edit_message_text("❌ OTP send failed. Try again.", chat_id=message.chat.id, message_id=processing_msg.message_id)
+            return
+
+        # Step 4: Generate and verify OTP automatically
+        bot.edit_message_text("🔐 Generating and verifying OTP...", chat_id=message.chat.id, message_id=processing_msg.message_id)
+        
+        # Try multiple OTP attempts
+        max_attempts = 5
+        for attempt in range(max_attempts):
+            otp = auto_generate_otp()
+            verified = verify_otp(session_id, otp, org_id, email)
+            
+            if verified:
+                # Step 5: Get access token
+                bot.edit_message_text("✅ OTP verified!\n🔄 Getting access token...", chat_id=message.chat.id, message_id=processing_msg.message_id)
+                
+                token = get_access_token()
+                if token:
+                    bot.edit_message_text(
+                        f"🎉 **Success!**\n\n"
+                        f"📧 Email used: `{email}`\n"
+                        f"🔑 OTP used: `{otp}`\n\n"
+                        f"✅ **Your Access Token:**\n\n"
+                        f"<code>{token}</code>", 
+                        chat_id=message.chat.id, 
+                        message_id=processing_msg.message_id,
+                        parse_mode="HTML"
+                    )
+                else:
+                    bot.edit_message_text("❌ Failed to get access token.", chat_id=message.chat.id, message_id=processing_msg.message_id)
+                return
+            else:
+                # Try next OTP
+                continue
+        
+        # If all attempts failed
+        bot.edit_message_text("❌ Failed to verify OTP after multiple attempts. Please try again.", chat_id=message.chat.id, message_id=processing_msg.message_id)
+
+    except Exception as e:
+        bot.edit_message_text(f"❌ Error: {str(e)}", chat_id=message.chat.id, message_id=processing_msg.message_id)
+
+# Keep the old manual method as backup
+@bot.message_handler(commands=['manual'])
+def ask_org_email_manual(message):
+    bot.send_message(message.chat.id, "📝 Manual mode: Send in `ORGCODE*EMAIL` format:")
+    bot.register_next_step_handler(message, process_org_email_manual)
+
+def process_org_email_manual(message):
     try:
         org_code, email = message.text.strip().split("*")
         org_id = get_org_id(org_code)
@@ -112,17 +190,17 @@ def process_org_email(message):
             "email": email
         }
         bot.send_message(message.chat.id, "📥 OTP sent to email. Please enter the OTP:")
-        bot.register_next_step_handler(message, process_otp)
+        bot.register_next_step_handler(message, process_otp_manual)
 
     except:
         bot.send_message(message.chat.id, "❌ Invalid format. Use: ORGCODE*EMAIL")
 
-def process_otp(message):
+def process_otp_manual(message):
     otp = message.text.strip()
     data = user_data.get(message.chat.id)
 
     if not data:
-        return bot.send_message(message.chat.id, "⚠️ Session expired. Please send /token again.")
+        return bot.send_message(message.chat.id, "⚠️ Session expired. Please send /manual again.")
 
     verified = verify_otp(data["session_id"], otp, data["org_id"], data["email"])
     if not verified:
@@ -136,7 +214,7 @@ def process_otp(message):
 
 if __name__ == "__main__":
     threading.Thread(target=run_flask).start()
-    print("🤖 Bot is running... Waiting for messages.")
+    print("🤖 Auto OTP Bot is running... Waiting for messages.")
     bot.infinity_polling()
 
 
