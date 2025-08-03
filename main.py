@@ -181,7 +181,8 @@ def send_otp(email, org_code, org_id):
     else:
         return None
 
-def verify_otp(session_id, otp_code, org_id, email):
+def verify_otp_and_get_user_token(session_id, otp_code, org_id, email):
+    """Verify OTP and return user authentication token"""
     url = "https://api.classplusapp.com/v2/users/verify"
     payload = {
         "otp": otp_code, "countryExt": "91", "sessionId": session_id,
@@ -193,7 +194,21 @@ def verify_otp(session_id, otp_code, org_id, email):
         "region": "IN", "user-agent": "Mozilla/5.0", "api-version": "52"
     }
     res = requests.post(url, json=payload, headers=headers)
-    return res.status_code == 201 and "success" in res.text
+    
+    if res.status_code == 201:
+        try:
+            response_data = res.json()
+            if "data" in response_data and "token" in response_data["data"]:
+                return response_data["data"]["token"]
+            else:
+                print(f"❌ Token not found in response: {response_data}")
+                return None
+        except Exception as e:
+            print(f"❌ Error parsing response: {e}")
+            return None
+    else:
+        print(f"❌ OTP verification failed: {res.status_code} - {res.text}")
+        return None
 
 def get_access_token():
     url = "https://event-api.classplusapp.com/analytics-api/v1/session/token"
@@ -266,22 +281,17 @@ def process_org_code_auto(message):
         otp = check_disposable_email_for_otp(email, max_wait=60)
         
         if otp:
-            bot.edit_message_text(f"✅ OTP found: {otp}\n🔄 Verifying OTP...", chat_id=message.chat.id, message_id=processing_msg.message_id)
+            bot.edit_message_text(f"✅ OTP found: {otp}\n🔄 Verifying OTP and getting user token...", chat_id=message.chat.id, message_id=processing_msg.message_id)
             
-            # Step 5: Verify OTP
-            verified = verify_otp(session_id, otp, org_id, email)
-            if verified:
-                # Step 6: Get access token
-                bot.edit_message_text("✅ OTP verified!\n🔄 Getting access token...", chat_id=message.chat.id, message_id=processing_msg.message_id)
-                
-                token = get_access_token()
-                if token:
-                    bot.edit_message_text(
-                        f"🎉 **Success!**\n\n"
-                        f"📧 Disposable email: `{email}`\n"
-                        f"🔑 OTP used: `{otp}`\n\n"
-                        f"✅ **Your Access Token:**\n\n"
-                        f"<code>{token}</code>", 
+            # Step 5: Verify OTP and get user authentication token
+            user_token = verify_otp_and_get_user_token(session_id, otp, org_id, email)
+            if user_token:
+                bot.edit_message_text(
+                    f"🎉 **SUCCESS! User Authentication Token Found!**\n\n"
+                    f"📧 Disposable email: `{email}`\n"
+                    f"🔑 OTP used: `{otp}`\n\n"
+                    f"✅ **Your User Authentication Token:**\n\n"
+                        f"<code>{user_token}</code>", 
                         chat_id=message.chat.id, 
                         message_id=processing_msg.message_id,
                         parse_mode="HTML"
@@ -351,15 +361,11 @@ def process_otp_manual(message):
     if not data:
         return bot.send_message(message.chat.id, "⚠️ Session expired. Please send /manual again.")
 
-    verified = verify_otp(data["session_id"], otp, data["org_id"], data["email"])
-    if not verified:
-        return bot.send_message(message.chat.id, "❌ OTP verification failed.")
-
-    token = get_access_token()
-    if token:
-        bot.send_message(message.chat.id, f"✅ Your Access Token:\n\n<code>{token}</code>", parse_mode="HTML")
+    user_token = verify_otp_and_get_user_token(data["session_id"], otp, data["org_id"], data["email"])
+    if user_token:
+        bot.send_message(message.chat.id, f"🎉 **SUCCESS! User Authentication Token Found!**\n\n✅ **Your User Authentication Token:**\n\n<code>{user_token}</code>", parse_mode="HTML")
     else:
-        bot.send_message(message.chat.id, "❌ Failed to get token.")
+        bot.send_message(message.chat.id, "❌ OTP verification failed or token not found.")
 
 # Keep old /token command for backward compatibility
 @bot.message_handler(commands=['token'])
