@@ -134,9 +134,13 @@ def send_otp(email, org_code, org_id):
         "region": "IN", "user-agent": "Mozilla/5.0", "api-version": "52", "device-id": "1234567890"
     }
     res = requests.post(url, json=payload, headers=headers)
+    
     if res.status_code == 200 and "sessionId" in res.text:
         return res.json()["data"]["sessionId"]
-    return None
+    elif res.status_code == 403 and "limit exceeded" in res.text.lower():
+        return "RATE_LIMIT_EXCEEDED"
+    else:
+        return None
 
 def verify_otp(session_id, otp_code, org_id, email):
     url = "https://api.classplusapp.com/v2/users/verify"
@@ -176,7 +180,7 @@ def try_common_otps():
 
 @bot.message_handler(commands=['start'])
 def welcome(message):
-    bot.send_message(message.chat.id, "👋 Welcome to Classplus Token Generator Bot!\n\n🔧 **Available Methods:**\n\n1️⃣ **Auto Temp Email** (NEW): `/auto` - Just send org code\n2️⃣ **Manual Mode** (Reliable): `/manual` - Send org code + email + OTP\n3️⃣ **Common OTPs** (Experimental): `/common` - Try common OTPs\n\n💡 **Recommendation**: Use `/auto` for best results!")
+    bot.send_message(message.chat.id, "👋 Welcome to Classplus Token Generator Bot!\n\n🔧 **Available Methods:**\n\n1️⃣ **Auto Temp Email** (NEW): `/auto` - Just send org code\n2️⃣ **Manual Mode** (Reliable): `/manual` - Send org code + email + OTP\n3️⃣ **Common OTPs** (Experimental): `/common` - Try common OTPs\n\n💡 **Recommendation**: Use `/manual` for best results!")
 
 @bot.message_handler(commands=['auto'])
 def ask_org_code_auto(message):
@@ -208,7 +212,21 @@ def process_org_code_auto(message):
         
         # Step 3: Send OTP
         session_id = send_otp(email, org_code, org_id)
-        if not session_id:
+        
+        if session_id == "RATE_LIMIT_EXCEEDED":
+            bot.edit_message_text(
+                "⚠️ **Rate Limit Exceeded!**\n\n"
+                "🚫 Classplus ne 6 hours ka limit lagaya hai.\n\n"
+                "💡 **Solutions:**\n"
+                "1️⃣ **Wait 6 hours** and try again\n"
+                "2️⃣ **Use Manual Mode**: `/manual`\n"
+                "3️⃣ **Try different org code**\n\n"
+                "📝 Manual mode mein aap apna real email use kar sakte hain.", 
+                chat_id=message.chat.id, 
+                message_id=processing_msg.message_id
+            )
+            return
+        elif not session_id:
             bot.edit_message_text("❌ OTP send failed. Try again.", chat_id=message.chat.id, message_id=processing_msg.message_id)
             return
 
@@ -282,7 +300,17 @@ def process_org_code_common(message):
         
         # Step 3: Send OTP
         session_id = send_otp(email, org_code, org_id)
-        if not session_id:
+        
+        if session_id == "RATE_LIMIT_EXCEEDED":
+            bot.edit_message_text(
+                "⚠️ **Rate Limit Exceeded!**\n\n"
+                "🚫 Classplus ne 6 hours ka limit lagaya hai.\n\n"
+                "💡 **Try Manual Mode**: `/manual`", 
+                chat_id=message.chat.id, 
+                message_id=processing_msg.message_id
+            )
+            return
+        elif not session_id:
             bot.edit_message_text("❌ OTP send failed. Try again.", chat_id=message.chat.id, message_id=processing_msg.message_id)
             return
 
@@ -321,7 +349,7 @@ def process_org_code_common(message):
         # If all attempts failed
         bot.edit_message_text(
             "❌ Common OTPs didn't work.\n\n"
-            "💡 **Try Auto Temp Email Mode**: `/auto`", 
+            "💡 **Try Manual Mode**: `/manual`", 
             chat_id=message.chat.id, 
             message_id=processing_msg.message_id
         )
@@ -343,7 +371,13 @@ def process_org_email_manual(message):
             return bot.send_message(message.chat.id, "❌ Invalid ORG code.")
 
         session_id = send_otp(email, org_code, org_id)
-        if not session_id:
+        
+        if session_id == "RATE_LIMIT_EXCEEDED":
+            return bot.send_message(message.chat.id, 
+                "⚠️ **Rate Limit Exceeded!**\n\n"
+                "🚫 Classplus ne 6 hours ka limit lagaya hai.\n\n"
+                "💡 **Wait 6 hours** and try again.")
+        elif not session_id:
             return bot.send_message(message.chat.id, "❌ OTP send failed. Try again.")
 
         # Save user state
@@ -383,7 +417,7 @@ def token_command(message):
 
 if __name__ == "__main__":
     threading.Thread(target=run_flask).start()
-    print("🤖 Classplus Token Bot with Temp Email is running... Waiting for messages.")
+    print("🤖 Classplus Token Bot with Rate Limit Handling is running... Waiting for messages.")
     bot.infinity_polling()
 
 
