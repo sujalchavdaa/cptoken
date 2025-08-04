@@ -1,32 +1,35 @@
 import os
 from os import environ
 
-# API Configuration
-API_ID = int(os.environ.get("API_ID", ""))
-API_HASH = os.environ.get("API_HASH", "")
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+# 🔐 API Configuration
+API_ID = int(os.environ.get("API_ID", "10170481"))
+API_HASH = os.environ.get("API_HASH", "22dd74455eb31c9aca628c3008580142")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8145882425:AAFTPRrPmsowHEBhY3ZPkcPaYXZebPtAVIM")
 
-CREDIT = os.environ.get("CREDIT", "𓍯𝙎𝙪𝙟𝙖𝙡⚝")
-# MongoDB Configuration
-DATABASE_NAME = os.environ.get("DATABASE_NAME", "UGxPRO")
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
+# 👤 User Configuration
+CREDIT = os.environ.get("CREDIT", "𝐈𝐓'𝐬𝐆𝐎𝐋𝐔")
+
+# 🗄️ MongoDB Configuration
+DATABASE_NAME = os.environ.get("DATABASE_NAME", "Cluster0")
+DATABASE_URL = os.environ.get("DATABASE_URL", "mongodb+srv://besib69802:YMOfgvnyjbRgW5qt@cluster0.yzzu2gn.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 MONGO_URL = DATABASE_URL  # For auth system
 
-# Owner and Admin Configuration
-OWNER_ID = int(os.environ.get("OWNER_ID", "7114926879"))
-ADMINS = [int(x) for x in os.environ.get("ADMINS", "7114926879").split()]  # Default to owner ID
+# 👨‍💼 Owner and Admin Configuration
+OWNER_ID = int(os.environ.get("OWNER_ID", "8048202739"))
+ADMINS = [int(x) for x in os.environ.get("ADMINS", "8048202739").split()]  # Default to owner ID
 
-# Channel Configuration
-PREMIUM_CHANNEL = "https://t.me/+W-Q51EuLf2QwYTl"
-# Thumbnail Configuration
-THUMBNAILS = list(map(str, os.environ.get("THUMBNAILS", "https://i.fbcd.co/products/original/ug-logo-designs-2-acbfbf7b80e16df4c902a34d1caf148e7e1feca736e21075114990e62294f3ac.jpg").split()))
+# 📢 Channel Configuration
+PREMIUM_CHANNEL = "https://t.me/ITSGOLU0"
 
-# Web Server Configuration
+# 🖼️ Thumbnail Configuration
+THUMBNAILS = list(map(str, os.environ.get("THUMBNAILS", "https://i.ibb.co/DPCmWSKV/1000003297-3.png").split()))
+
+# 🌐 Web Server Configuration
 WEB_SERVER = os.environ.get("WEB_SERVER", "False").lower() == "true"
 WEBHOOK = True  # Don't change this
 PORT = int(os.environ.get("PORT", 8000))
 
-# Message Formats
+# 🔄 Message Templates
 AUTH_MESSAGES = {
     "subscription_active": """<b>🎉 Subscription Activated!</b>
 
