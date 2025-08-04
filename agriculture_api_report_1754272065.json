@@ -1,0 +1,55 @@
+{
+  "target_api": "https://onlineagricultureapi.classx.co.in",
+  "analysis_date": "2025-08-04 01:47:45",
+  "api_status": {
+    "connectivity": "\u2705 Working",
+    "response": "Server is Live",
+    "endpoints_tested": 50,
+    "working_endpoints": 2,
+    "failed_endpoints": 48
+  },
+  "working_endpoints": [
+    {
+      "endpoint": "/",
+      "response": "Server is Live",
+      "status": 200
+    },
+    {
+      "endpoint": "/test.php",
+      "response": "Api Live",
+      "status": 200
+    }
+  ],
+  "failed_approaches": [
+    "All API endpoints (/api, /courses, /pdfs, etc.)",
+    "All subdomain variations",
+    "All authentication headers",
+    "All JSON payloads",
+    "All query parameters"
+  ],
+  "tested_methods": [
+    "GET requests",
+    "POST requests",
+    "PUT requests (405 error)",
+    "DELETE requests (405 error)",
+    "Query parameters",
+    "JSON payloads",
+    "Authentication headers",
+    "Subdomain variations",
+    "Path variations"
+  ],
+  "content_found": {
+    "courses": 0,
+    "pdfs": 0,
+    "videos": 0,
+    "html_content": 0,
+    "json_data": 0
+  },
+  "recommendations": [
+    "API appears to be a simple health check endpoint",
+    "No actual content endpoints discovered",
+    "May require specific authentication or tokens",
+    "Could be a placeholder API",
+    "Manual exploration needed"
+  ]
+}
