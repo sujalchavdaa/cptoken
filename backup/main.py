@@ -1,4 +1,4 @@
-# 🔧 Enhanced UG Uploader Bot with All Improvements
+# 🔧 Standard Library
 import os
 import re
 import sys
@@ -54,7 +54,7 @@ from pyrogram.errors import (
 )
 from pyrogram.errors.exceptions.bad_request_400 import MessageNotModified
 
-# 🧠 Enhanced Bot Modules
+# 🧠 Bot Modules
 import auth
 import ug as helper
 from ug import *
@@ -63,15 +63,6 @@ from clean import register_clean_handler
 from logs import logging
 from utils import progress_bar
 from vars import *
-
-# 🚀 New Enhanced Modules
-from security import security
-from performance import performance
-from analytics import analytics
-from notifications import notifications
-from ui_enhancements import ui
-from error_handler import error_handler
-
 from pyromod import listen
 import apixug
 from apixug import SecureAPIClient
